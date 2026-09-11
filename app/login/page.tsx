@@ -1,80 +1,125 @@
-import { login } from './actions'
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
-export default async function LoginPage(props: { searchParams: Promise<{ error?: string }> }) {
-  const searchParams = await props.searchParams
-  const error = searchParams.error
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        setError(data.error || 'Login failed')
+        return
+      }
+
+      // Redirect to dashboard
+      router.push('/')
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('An error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
-      {/* Card */}
-      <div className="w-full max-w-sm">
-        {/* Logo + brand */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <Image
-            src="/rp-logo.png"
-            alt="RP Solutions"
-            width={48}
-            height={48}
-            className="h-12 w-auto"
-          />
-          <div className="text-center">
-            <h1 className="text-xl font-semibold tracking-tight text-white">PPL Dashboard</h1>
-            <p className="mt-1 text-sm text-zinc-500">Sign in to continue</p>
+    <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/10">
+            <Image src="/rp-logo.png" alt="RP Solutions" width={32} height={32} className="h-8 w-auto" />
+            <span className="text-white font-semibold">PPL Dashboard</span>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
-          <form className="space-y-5" action={login}>
+        {/* Card */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-8 shadow-2xl">
+          <h1 className="text-2xl font-bold text-white mb-2">Login</h1>
+          <p className="text-zinc-400 text-sm mb-8">Enter your credentials to access the dashboard</p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                disabled={loading}
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                disabled={loading}
+                required
+              />
+            </div>
+
+            {/* Error Message */}
             {error && (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3">
-                <p className="text-sm text-red-400 text-center">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-300">
+                {error}
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label htmlFor="email" className="block text-xs font-medium text-zinc-400">
-                Email
-              </label>
-              <div suppressHydrationWarning>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="block w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder-zinc-600 transition-colors focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="block text-xs font-medium text-zinc-400">
-                Password
-              </label>
-              <div suppressHydrationWarning>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="block w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder-zinc-600 transition-colors focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                />
-              </div>
-            </div>
-
+            {/* Submit Button */}
             <button
               type="submit"
-              className="mt-2 flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-600 text-white font-medium py-2 rounded-lg transition duration-200 mt-6"
             >
-              Sign In
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
+
+          {/* Test Credentials */}
+          <div className="mt-6 pt-6 border-t border-white/10">
+            <p className="text-xs text-zinc-400 mb-2">Demo credentials:</p>
+            <div className="bg-zinc-900/50 rounded p-2 text-xs text-zinc-300 space-y-1 font-mono">
+              <p>Email: admin@example.com</p>
+              <p>Password: test</p>
+            </div>
+          </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-zinc-700">
-          RP Solutions © {new Date().getFullYear()}
+        {/* Footer */}
+        <p className="text-center text-zinc-500 text-xs mt-8">
+          RP Solutions © 2026. All rights reserved.
         </p>
       </div>
     </div>

@@ -1,37 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { requireAuth } from '@/lib/api-auth'
+import { requireAuth } from '@/lib/api-auth-sql'
+import { getDashboardBuyers } from '@/lib/dashboard-db'
 import { parseFilters } from '@/lib/parse-filters'
 import type { ApiResponse, BuyersData } from '@/types/api'
 
 export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<BuyersData>>> {
-  const auth = await requireAuth()
-  if (!auth.ok) return auth.response as NextResponse<ApiResponse<BuyersData>>
+  try {
+    const auth = await requireAuth()
+    if (!auth.ok) return auth.response as NextResponse<ApiResponse<BuyersData>>
 
-  const f = parseFilters(req)
-  const suppliers = auth.profile.role === 'supplier' && auth.profile.partnerId
-    ? [auth.profile.partnerId]
-    : f.suppliers
+    const f = parseFilters(req)
+    const result = await getDashboardBuyers(
+      auth.profile.userId,
+      f.dateFrom,
+      f.dateTo,
+      f.page,
+      f.pageSize,
+      f.sortBy,
+      (f.sortDir ?? 'desc') as 'asc' | 'desc',
+      f.suppliers || undefined,
+      f.verticals || undefined
+    )
 
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('fn_dashboard_buyers', {
-    p_date_from: f.dateFrom,
-    p_date_to:   f.dateTo,
-    p_suppliers: suppliers,
-    p_buyers:    f.buyers,
-    p_verticals: f.verticals,
-    p_sort_by:   f.sortBy,
-    p_sort_dir:  f.sortDir,
-    p_page:      f.page,
-    p_page_size: f.pageSize,
-  })
-
-  if (error) return NextResponse.json({ data: null, error: error.message }, { status: 500 })
-
-  const rows = data as any[]
-  const total = rows[0]?.total_count ?? 0
-  return NextResponse.json({
-    data: { rows, total, page: f.page, page_size: f.pageSize },
-    error: null,
-  })
+    return NextResponse.json({
+      data: { rows: result.data, total: result.totalCount, page: f.page, page_size: f.pageSize },
+      error: null,
+    })
+  } catch (error) {
+    console.error('Error in /api/buyers:', error)
+    return NextResponse.json(
+      { data: null, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
 }
+

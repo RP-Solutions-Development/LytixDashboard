@@ -1,25 +1,16 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/session'
 import { LogoutButton } from '@/components/logout-button'
 import { UsersAdmin } from '@/components/users-admin'
 import Image from 'next/image'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await getSession()
+  if (!session) redirect('/login')
 
-  const { data: profile } = await supabase.rpc('fn_my_profile')
-  const p = profile as any
-
-  if (p?.role !== 'admin') redirect('/')
-
-  const { data: partners } = await supabase
-    .from('partners')
-    .select('id, name')
-    .eq('partner_type', 'supplier')
-    .eq('status', 'active')
-    .order('name')
+  if (session.role !== 'admin') redirect('/')
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -40,14 +31,14 @@ export default async function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-500">{p?.display_name}</span>
+            <span className="text-sm text-zinc-500">{session.displayName}</span>
             <LogoutButton />
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-screen-xl px-4 py-8">
-        <UsersAdmin partners={partners ?? []} />
+        <UsersAdmin partners={[]} />
       </main>
     </div>
   )

@@ -1,9 +1,38 @@
 import { NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/api-auth'
+import { cookies } from 'next/headers'
+import crypto from 'crypto'
+import { validateSession } from '@/lib/auth-db'
 
 export async function GET() {
-  const auth = await requireAuth()
-  if (!auth.ok) return auth.response
+  try {
+    const cookieStore = await cookies()
+    const sessionId = cookieStore.get('sessionId')?.value
+    const sessionToken = cookieStore.get('sessionToken')?.value
 
-  return NextResponse.json({ data: auth.profile, error: null })
+    if (!sessionId || !sessionToken) {
+      return NextResponse.json(
+        { data: null, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex')
+    const profile = await validateSession(sessionId, tokenHash)
+
+    if (!profile) {
+      return NextResponse.json(
+        { data: null, error: 'Session invalid or expired' },
+        { status: 401 }
+      )
+    }
+
+    return NextResponse.json({ data: profile, error: null })
+  } catch (error) {
+    console.error('Error in /api/me:', error)
+    return NextResponse.json(
+      { data: null, error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
 }
+

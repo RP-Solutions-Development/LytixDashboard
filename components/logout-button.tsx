@@ -1,16 +1,31 @@
 'use client'
 
-import { logout } from '@/app/login/actions'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export function LogoutButton() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+
+  const handleLogout = async () => {
+    setLoading(true)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <form action={logout}>
-      <button
-        type="submit"
-        className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-300 hover:text-zinc-900"
-      >
-        Sign Out
-      </button>
-    </form>
+    <button
+      onClick={handleLogout}
+      disabled={loading}
+      className="text-sm text-zinc-500 transition-colors hover:text-zinc-900 disabled:opacity-50"
+    >
+      {loading ? 'Logging out...' : 'Logout'}
+    </button>
   )
 }

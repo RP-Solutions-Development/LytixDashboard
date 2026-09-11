@@ -1,17 +1,15 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
+import { getSession } from '@/lib/session'
 import { LeadsClient } from '@/components/leads-client'
 import { LogoutButton } from '@/components/logout-button'
 import Image from 'next/image'
 
-export default async function LeadsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+export const dynamic = 'force-dynamic'
 
-  const { data: profile } = await supabase.rpc('fn_my_profile')
-  const p = profile as any
+export default async function LeadsPage() {
+  const session = await getSession()
+  if (!session) redirect('/login')
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -27,8 +25,8 @@ export default async function LeadsPage() {
           </div>
           <nav className="flex items-center gap-4">
             <span className="text-sm text-zinc-500">
-              {p?.display_name ?? user.email}
-              {p?.role === 'admin' && (
+              {session.displayName}
+              {session.role === 'admin' && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600">
                   Admin
                 </span>
