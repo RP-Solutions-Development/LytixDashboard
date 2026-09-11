@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  ppl-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ppl-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # SQL Server Connection (obtener de .env.local en producción)
+      - SQLSERVER_HOST=${SQLSERVER_HOST}
+      - SQLSERVER_PORT=${SQLSERVER_PORT:-1433}
+      - SQLSERVER_DATABASE=${SQLSERVER_DATABASE}
+      - SQLSERVER_USER=${SQLSERVER_USER}
+      - SQLSERVER_PASSWORD=${SQLSERVER_PASSWORD}
+      - SQLSERVER_ENCRYPT=${SQLSERVER_ENCRYPT:-false}
+      - SQLSERVER_TRUST_SERVER_CERTIFICATE=${SQLSERVER_TRUST_SERVER_CERTIFICATE:-true}
+      - SQLSERVER_POOL_MAX=${SQLSERVER_POOL_MAX:-20}
+
+      # Authentication Configuration
+      - AUTH_SESSION_HOURS=${AUTH_SESSION_HOURS:-12}
+      - AUTH_RATE_WINDOW_MINUTES=${AUTH_RATE_WINDOW_MINUTES:-15}
+      - AUTH_EMAIL_FAILURE_LIMIT=${AUTH_EMAIL_FAILURE_LIMIT:-5}
+      - AUTH_IP_FAILURE_LIMIT=${AUTH_IP_FAILURE_LIMIT:-20}
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
+
+      # Node environment
+      - NODE_ENV=production
+    volumes:
+      # Logs (opcional)
+      - ./logs:/app/logs
+    networks:
+      - ppl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy (opcional pero recomendado)
+  nginx:
+    image: nginx:alpine
+    container_name: ppl-dashboard-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - ppl-network
+    depends_on:
+      - ppl-dashboard
+
+networks:
+  ppl-network:
+    driver: bridge
